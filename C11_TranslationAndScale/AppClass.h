@@ -15,6 +15,7 @@ Date: 2017/05
 class Application
 {
 	MyMesh* m_pMesh = nullptr;
+	float moveright;
 	String m_sProgrammer = "Alberto Bobadilla - labigm@rit.edu";
 
 private:
