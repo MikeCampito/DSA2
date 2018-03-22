@@ -16,9 +16,11 @@ namespace Simplex
 
 class Application
 {
+	vector3 m_v3Right; //Right position storage
+	glm::quat m_Orientation = glm::quat(); //Failed quaternion variable
 	MyCamera* m_pCamera = nullptr; //Camera class
 	MyMeshManager* m_pMyMeshMngr = nullptr; //My Mesh Manager
-	String m_sProgrammer = "Alberto Bobadilla - labigm@rit.edu"; //Programmer
+	String m_sProgrammer = "Michael Campito - mjc1264@rit.edu"; //Programmer
 private:
 	static ImGuiObject gui; //GUI object
 

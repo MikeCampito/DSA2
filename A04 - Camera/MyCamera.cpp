@@ -35,6 +35,7 @@ Simplex::MyCamera::MyCamera(vector3 a_v3Position, vector3 a_v3Target, vector3 a_
 	SetPositionTargetAndUp(a_v3Position, a_v3Target, a_v3Upward); //set the position, target and up
 }
 
+
 Simplex::MyCamera::MyCamera(MyCamera const& other)
 {
 	m_v3Position = other.m_v3Position;
@@ -73,6 +74,21 @@ void Simplex::MyCamera::Init(void)
 	CalculateProjectionMatrix();
 	CalculateViewMatrix();
 	//No pointers to initialize here
+}
+
+//Returns the current position
+vector3 Simplex::MyCamera::GetPosition(void) {
+	return this->m_v3Position;
+}
+
+//Returns the current target
+vector3 Simplex::MyCamera::GetTarget(void) {
+	return m_v3Target;
+}
+
+//Returns the current up value
+vector3 Simplex::MyCamera::GetUp(void) {
+	return m_v3Up;
 }
 
 void Simplex::MyCamera::Release(void)

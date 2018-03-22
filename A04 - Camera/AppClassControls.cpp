@@ -1,4 +1,6 @@
 #include "AppClass.h"
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 using namespace Simplex;
 //Mouse
 void Application::ProcessMouseMovement(sf::Event a_event)
@@ -350,25 +352,57 @@ void Application::CameraRotation(float a_fSpeed)
 	if (MouseX < CenterX)
 	{
 		fDeltaMouse = static_cast<float>(CenterX - MouseX);
-		fAngleY += fDeltaMouse * a_fSpeed;
+		fAngleY += fDeltaMouse * a_fSpeed * 10;
 	}
 	else if (MouseX > CenterX)
 	{
 		fDeltaMouse = static_cast<float>(MouseX - CenterX);
-		fAngleY -= fDeltaMouse * a_fSpeed;
+		fAngleY -= fDeltaMouse * a_fSpeed * 10;
 	}
 
 	if (MouseY < CenterY)
 	{
 		fDeltaMouse = static_cast<float>(CenterY - MouseY);
-		fAngleX -= fDeltaMouse * a_fSpeed;
+		fAngleX += fDeltaMouse * a_fSpeed * 10;
 	}
 	else if (MouseY > CenterY)
 	{
 		fDeltaMouse = static_cast<float>(MouseY - CenterY);
-		fAngleX += fDeltaMouse * a_fSpeed;
+		fAngleX -= fDeltaMouse * a_fSpeed * 10;
 	}
-	//Change the Yaw and the Pitch of the camera
+
+	vector3 curRo = m_pCamera->GetTarget() - m_pCamera->GetPosition(); //Current rotation for target
+	glm::quat rotate = glm::quat();  //Quaternion for rotation
+	//Filling out the quaternion
+	rotate.w = cosf(0.0174533f / 2);  
+	rotate.y = fAngleY * sinf(0.0174533f / 2);
+	rotate.x = fAngleX * sinf(0.0174533f / 2);
+	
+	//Old method
+	//curRo = glm::rotateY(curRo, fAngleY);
+	//curRo = glm::rotateX(curRo, fAngleX);
+	
+	curRo = rotate * curRo; //Quaternion times vector for vector result
+
+	vector3 curUp = m_pCamera->GetUp() - m_pCamera->GetPosition(); //Get the current Up vector
+	curUp = rotate * curUp;  //Rotate the current up vector
+
+	//Old Method
+	//curUp = glm::rotateX(curUp, fAngleX);
+	//curUp = glm::rotateY(curUp, fAngleY);
+
+	
+	vector3 curRi = m_v3Right - m_pCamera->GetPosition();  //Get the current right vector
+	curRi = rotate * curRi;  //Rotate the current right vector
+	
+	//Old method						 
+	//curRi = glm::rotateY(curRi, fAngleY);
+	//curRi = glm::rotateX(curRi, fAngleX);
+	m_v3Right = curRi + m_pCamera->GetPosition(); //Set right based on mouse rotation
+	m_pCamera->SetTarget(curRo + m_pCamera->GetPosition()); //Set target based on mouse rotation
+	m_pCamera->SetUp(m_pCamera->GetPosition() + curUp);  //Set up position based on mouse rotation
+	m_pCamera->CalculateViewMatrix();
+
 	SetCursorPos(CenterX, CenterY);//Position the mouse in the center
 }
 //Keyboard
@@ -380,11 +414,40 @@ void Application::ProcessKeyboard(void)
 	*/
 #pragma region Camera Position
 	float fSpeed = 0.1f;
+
 	float fMultiplier = sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) ||
 		sf::Keyboard::isKeyPressed(sf::Keyboard::RShift);
-
+	
 	if (fMultiplier)
 		fSpeed *= 5.0f;
+	
+	//If moving forward
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
+		vector3 tempright = m_v3Right + (0.1f * (m_pCamera->GetTarget() - m_pCamera->GetPosition())); //Temp variable to keep track of the right
+		m_pCamera->SetPositionTargetAndUp(m_pCamera->GetPosition() + (0.1f * (m_pCamera->GetTarget()-m_pCamera->GetPosition())), m_pCamera->GetTarget() + (0.1f * (m_pCamera->GetTarget() - m_pCamera->GetPosition())), m_pCamera->GetUp() - m_pCamera->GetPosition());
+		m_v3Right = tempright;
+	}
+
+	//If moving backwards
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
+		vector3 tempright = m_v3Right + (-0.1f * (m_pCamera->GetTarget() - m_pCamera->GetPosition())); //Temp variable to keep track of the right
+		m_pCamera->SetPositionTargetAndUp(m_pCamera->GetPosition() + (-0.1f * (m_pCamera->GetTarget() - m_pCamera->GetPosition())), m_pCamera->GetTarget() + (-0.1f * (m_pCamera->GetTarget() - m_pCamera->GetPosition())), m_pCamera->GetUp() - m_pCamera->GetPosition());
+		m_v3Right = tempright;
+	}
+
+	//If moving left
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) { 
+		vector3 tempright = m_v3Right + (-0.1f * (m_v3Right - m_pCamera->GetPosition())); //Temp variable to keep track of the right
+		m_pCamera->SetPositionTargetAndUp(m_pCamera->GetPosition() + (-0.1f * (m_v3Right - m_pCamera->GetPosition())), m_pCamera->GetTarget() + (-0.1f * (m_v3Right - m_pCamera->GetPosition())), m_pCamera->GetUp() - m_pCamera->GetPosition());
+		m_v3Right = tempright;
+	}
+
+	//If moving right
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
+		vector3 tempright = m_v3Right + (0.1f * (m_v3Right - m_pCamera->GetPosition())); //Temp variable to keep track of the right
+		m_pCamera->SetPositionTargetAndUp(m_pCamera->GetPosition() + (0.1f * (m_v3Right - m_pCamera->GetPosition())), m_pCamera->GetTarget() + (0.1f * (m_v3Right - m_pCamera->GetPosition())), m_pCamera->GetUp()- m_pCamera->GetPosition());
+		m_v3Right = tempright;
+	}
 #pragma endregion
 }
 //Joystick
