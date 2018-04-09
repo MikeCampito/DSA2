@@ -87,6 +87,7 @@ void MyRigidBody::SetModelMatrix(matrix4 a_m4ModelMatrix)
 
 	//Calculate the 8 corners of the cube
 	vector3 v3Corner[8];
+
 	//Back square
 	v3Corner[0] = m_v3MinL;
 	v3Corner[1] = vector3(m_v3MaxL.x, m_v3MinL.y, m_v3MinL.z);
@@ -286,7 +287,163 @@ uint MyRigidBody::SAT(MyRigidBody* const a_pOther)
 	Simplex that might help you [eSATResults] feel free to use it.
 	(eSATResults::SAT_NONE has a value of 0)
 	*/
+	
+	float ra, rb; //comparison floats for later calculations
+	vector3 globcen1, globcen2; //Global center declarations
+	globcen1 = GetCenterGlobal();
+	globcen2 = a_pOther->GetCenterGlobal();
 
+	vector3 halfwidth2 = a_pOther->GetHalfWidth(); //Halfwidth shortcut for the second version
+
+	//Rotation axes declarations
+	vector3 axes1[3];
+	axes1[0] = vector3(GetModelMatrix()[0][0], GetModelMatrix()[0][1], GetModelMatrix()[0][2]);
+	axes1[1] = vector3(GetModelMatrix()[1][0], GetModelMatrix()[1][1], GetModelMatrix()[1][2]);
+	axes1[2] = vector3(GetModelMatrix()[2][0], GetModelMatrix()[2][1], GetModelMatrix()[2][2]);
+	vector3 axes2[3];
+	axes2[0] = vector3(a_pOther->GetModelMatrix()[0][0], a_pOther->GetModelMatrix()[0][1], a_pOther->GetModelMatrix()[0][2]);
+	axes2[1] = vector3(a_pOther->GetModelMatrix()[1][0], a_pOther->GetModelMatrix()[1][1], a_pOther->GetModelMatrix()[1][2]);
+	axes2[2] = vector3(a_pOther->GetModelMatrix()[2][0], a_pOther->GetModelMatrix()[2][1], a_pOther->GetModelMatrix()[2][2]);
+
+	matrix3 rotmat1, rotmat2;  //Rotmat is R, rotmat2 is AbsR
+	
+	//Nested for loop to fill the rotation matrix (transforms into object one's space)
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			rotmat1[i][j] = glm::dot(axes1[i], axes2[j]);  //Dot product converts the space
+		}
+	}
+	
+	//t gets the distance between centers
+	vector3 t = globcen2 - globcen1;
+	
+	//translates t into the first object's space
+	t = vector3(glm::dot(t, axes1[0]), glm::dot(t, axes1[1]), glm::dot(t, axes1[2]));
+	
+	//Creates and fills an absolute value version of rotmat1
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			rotmat2[i][j] = glm::abs(rotmat1[i][j]) + float(DBL_EPSILON); //Epsilon solves the zero problem
+		}
+	}
+
+	//Test axes L = A0, L = A1, L = A2
+	for (int i = 0; i < 3; i++) {
+		
+		//Individual if statements because halfwidth[i] isn't valid
+		if (i == 0) {
+			ra = m_v3HalfWidth.x;
+		}
+		else if (i == 1) {
+			ra = m_v3HalfWidth.y;
+		}
+		else if (i == 2){
+			ra = m_v3HalfWidth.z;
+		}
+		rb = halfwidth2.x * rotmat2[i][0] +halfwidth2.y * rotmat2[i][1] + halfwidth2.z * rotmat2[i][2];
+		
+		//Individual if statements because t[i] isn't valid
+		if (i == 0) {
+			if (abs(t.x) > ra + rb) {
+				return 1;
+			}
+		}
+		else if (i == 1) {
+			if (abs(t.y) > ra + rb) {
+				return 1;
+			}
+		}
+		else if (i == 2) {
+			if (abs(t.z) > ra + rb) {
+				return 1;
+			}
+		}
+	}
+
+	//Test axes L = B0, L = B1, L = B2
+	for (int i = 0; i < 3; i++) {
+		ra = m_v3HalfWidth.x * rotmat2[0][i] + m_v3HalfWidth.y * rotmat2[1][i] + m_v3HalfWidth.z * rotmat2[2][i];
+		
+		//again, individual if statements
+		if (i == 0) {
+			rb = m_v3HalfWidth.x;
+		}
+		else if (i == 1) {
+			rb = m_v3HalfWidth.y;
+		}
+		else if (i == 2) {
+			rb = m_v3HalfWidth.z;
+		}
+		
+		if (abs(t.x * rotmat1[0][i] + t.y * rotmat1[1][i] + t.z * rotmat1[2][i]) > ra + rb) {
+			return 1;
+		}
+	}
+
+	//Now begins the cross product tests
+
+	//Test axis L = A0 x B0
+	ra = m_v3HalfWidth.y * rotmat2[2][0] + m_v3HalfWidth.z * rotmat2[1][0];
+	rb = halfwidth2.y * rotmat2[0][2] + halfwidth2.z * rotmat2[0][1];
+	if (abs(t.z * rotmat1[1][0] - t.y * rotmat1[2][0]) > ra + rb) {
+		return 1;
+	}
+
+	//Test axis L = A0 x B1
+	ra = m_v3HalfWidth.y * rotmat2[2][1] + m_v3HalfWidth.z * rotmat2[1][1];
+	rb = halfwidth2.x * rotmat2[0][2] + halfwidth2.z * rotmat2[0][0];
+	if (abs(t.z * rotmat1[1][1] - t.y * rotmat1[2][1]) > ra + rb) {
+		return 1;
+	}
+
+	//Test axis L = A0 x B2
+	ra = m_v3HalfWidth.y * rotmat2[2][2] + m_v3HalfWidth.z * rotmat2[1][2];
+	rb = halfwidth2.x * rotmat2[0][1] + halfwidth2.y * rotmat2[0][0];
+	if (abs(t.z * rotmat1[1][2] - t.y * rotmat1[2][2]) > ra + rb) {
+		return 1;
+	}
+
+	//Test axis L = A1 x B0
+	ra = m_v3HalfWidth.x * rotmat2[2][0] + m_v3HalfWidth.z * rotmat2[0][0];
+	rb = halfwidth2.y * rotmat2[1][2] + halfwidth2.z * rotmat2[1][1];
+	if (abs(t.x * rotmat1[2][0] - t.z * rotmat1[0][0]) > ra + rb) {
+		return 1;
+	}
+
+	//Test axis L = A1 x B1
+	ra = m_v3HalfWidth.x * rotmat2[2][1] + m_v3HalfWidth.z * rotmat2[0][1];
+	rb = halfwidth2.x * rotmat2[1][2] + halfwidth2.z * rotmat2[1][0];
+	if (abs(t.x * rotmat1[2][1] - t.z * rotmat1[0][1]) > ra + rb) {
+		return 1;
+	}
+
+	//Test axis L = A1 x B2
+	ra = m_v3HalfWidth.x * rotmat2[2][2] + m_v3HalfWidth.z * rotmat2[0][2];
+	rb = halfwidth2.x * rotmat2[1][1] + halfwidth2.y * rotmat2[1][0];
+	if (abs(t.x * rotmat1[2][2] - t.z * rotmat1[0][2]) > ra + rb) {
+		return 1;
+	}
+
+	//Test axis L = A2 x B0
+	ra = m_v3HalfWidth.x * rotmat2[1][0] + m_v3HalfWidth.y * rotmat2[0][0];
+	rb = halfwidth2.y * rotmat2[2][2] + halfwidth2.z * rotmat2[2][1];
+	if (abs(t.y * rotmat1[0][0] - t.x * rotmat1[1][0]) > ra + rb) {
+		return 1;
+	}
+
+	//Test axis L = A2 x B1
+	ra = m_v3HalfWidth.x * rotmat2[1][1] + m_v3HalfWidth.y * rotmat2[0][1];
+	rb = halfwidth2.x * rotmat2[2][2] + halfwidth2.z * rotmat2[2][0];
+	if (abs(t.y * rotmat1[0][1] - t.x * rotmat1[1][1]) > ra + rb) {
+		return 1;
+	}
+
+	//Test axis L = A2 x B2
+	ra = m_v3HalfWidth.x * rotmat2[1][2] + m_v3HalfWidth.y * rotmat2[0][2];
+	rb = halfwidth2.x * rotmat2[2][1] + halfwidth2.y * rotmat2[2][0];
+	if (abs(t.y * rotmat1[0][2] - t.x * rotmat1[1][2]) > ra + rb) {
+		return 1;
+	}
 	//there is no axis test that separates this two objects
 	return eSATResults::SAT_NONE;
 }
