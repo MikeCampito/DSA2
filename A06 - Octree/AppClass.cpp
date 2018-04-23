@@ -18,6 +18,7 @@ void Application::InitVariables(void)
 	int nSquare = static_cast<int>(std::sqrt(uInstances));
 	m_uObjects = nSquare * nSquare;
 	uint uIndex = -1;
+
 	for (int i = 0; i < nSquare; i++)
 	{
 		for (int j = 0; j < nSquare; j++)
@@ -29,11 +30,23 @@ void Application::InitVariables(void)
 			m_pEntityMngr->SetModelMatrix(m4Position);
 		}
 	}
-	m_uOctantLevels = 1;
+	m_uOctantLevels = 2;
+	m_pRoot = new MyOctant(m_uOctantLevels, 5);
+	
+	m_pRoot->ConstructTree(2);
+	m_pRoot->AssignIDtoEntity();
 	m_pEntityMngr->Update();
 }
 void Application::Update(void)
 {
+	if (ocac == true) {
+		timer += .01f;
+		if (timer / 3.0f >= 0) {
+			timer = 0.0f;
+			m_pRoot->KillBranches();
+			m_pRoot->ConstructTree();
+		}
+	}
 	//Update the system so it knows how much time has passed since the last call
 	m_pSystem->Update();
 
@@ -55,7 +68,9 @@ void Application::Display(void)
 	ClearScreen();
 
 	//display octree
-	//m_pRoot->Display();
+	if (display == true) {
+		m_pRoot->DisplayLeafs();
+	}
 	
 	// draw a skybox
 	m_pMeshMngr->AddSkyboxToRenderList();

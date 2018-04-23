@@ -6,7 +6,6 @@ Date: 2017/07
 #define __MYOCTANTCLASS_H_
 
 #include "MyEntityManager.h"
-
 namespace Simplex
 {
 
@@ -19,7 +18,7 @@ class MyOctant
 
 	uint m_uID = 0; //Will store the current ID for this octant
 	uint m_uLevel = 0; //Will store the current level of the octant
-	uint m_uChildren = 0;// Number of children on the octant (either 0 or 8)
+	uint m_uChildren = 0; // Number of children on the octant (either 0 or 8)
 
 	float m_fSize = 0.0f; //Size of the octant
 
@@ -35,9 +34,10 @@ class MyOctant
 
 	std::vector<uint> m_EntityList; //List of Entities under this octant (Index in Entity Manager)
 
+	bool isRoot;
 	MyOctant* m_pRoot = nullptr;//Root octant
 	std::vector<MyOctant*> m_lChild; //list of nodes that contain objects (this will be applied to root only)
-	
+	std::vector<uint> idList;
 public:
 	/*
 	USAGE: Constructor, will create an octant containing all MagnaEntities Instances in the Mesh 

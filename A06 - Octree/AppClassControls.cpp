@@ -78,6 +78,25 @@ void Application::ProcessKeyPressed(sf::Event a_event)
 	case sf::Keyboard::RShift:
 		m_bModifier = true;
 		break;
+	case sf::Keyboard::O:
+		if (ocac == true) {
+			ocac = false;			
+			m_pRoot->KillBranches();
+			m_pEntityMngr->ClearDimensionSetAll();
+		}
+		else {
+			ocac = true;
+			m_pRoot->ConstructTree();
+		}
+		break;
+	case sf::Keyboard::P:
+		if (display == true) {
+			display = false;
+		}
+		else {
+			display = true;
+		}
+		break;
 	}
 	
 	//gui
